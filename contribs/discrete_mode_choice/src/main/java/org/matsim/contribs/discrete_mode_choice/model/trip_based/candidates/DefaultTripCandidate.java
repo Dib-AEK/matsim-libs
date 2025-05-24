@@ -2,7 +2,7 @@ package org.matsim.contribs.discrete_mode_choice.model.trip_based.candidates;
 
 /**
  * Default implementation for a TripCandidate.
- * 
+ *
  * @author sebhoerl
  */
 public class DefaultTripCandidate implements TripCandidate {
@@ -25,7 +25,15 @@ public class DefaultTripCandidate implements TripCandidate {
 	public String getMode() {
 		return mode;
 	}
-	
+
+	public String getModes() {
+		return mode;
+	}
+
+	public String getUtilities() {
+		return Double.toString(utility);
+	}
+
 	@Override
 	public double getDuration() {
 		return duration;

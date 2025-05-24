@@ -4,7 +4,7 @@ import org.matsim.core.config.ReflectiveConfigGroup;
 
 /**
  * Base class for component configuration sections.
- * 
+ *
  * @author sebhoerl
  *
  */

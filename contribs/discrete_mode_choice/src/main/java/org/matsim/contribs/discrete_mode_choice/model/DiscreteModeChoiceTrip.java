@@ -11,7 +11,7 @@ import org.matsim.utils.objectattributes.attributable.Attributes;
  * This class represents an agent's trip. It contains structural information
  * such as the origin and destination activity and the mode that has initially
  * been used to cover the trip.
- * 
+ *
  * @author sebhoerl
  */
 public final class DiscreteModeChoiceTrip {
@@ -49,6 +49,9 @@ public final class DiscreteModeChoiceTrip {
 	}
 
 	public double getDepartureTime() {
+		if (departureTime == null) {
+			return this.originActivity.getEndTime().seconds();
+		}
 		return departureTime.seconds();
 	}
 
@@ -72,7 +75,7 @@ public final class DiscreteModeChoiceTrip {
 	public int getIndex() {
 		return index;
 	}
-	
+
 	public Attributes getTripAttributes() {
 		return tripAttributes;
 	}

@@ -2,6 +2,7 @@ package org.matsim.contribs.discrete_mode_choice.modules;
 
 import com.google.inject.Inject;
 import org.matsim.api.core.v01.population.Population;
+import org.matsim.contribs.discrete_mode_choice.model.utilities.MultinomialLogitSelector;
 import org.matsim.contribs.discrete_mode_choice.modules.config.DiscreteModeChoiceConfigGroup;
 import org.matsim.contribs.discrete_mode_choice.modules.utils.ExtractPlanUtilities;
 import org.matsim.core.config.groups.ControllerConfigGroup;
@@ -39,6 +40,11 @@ public class UtilitiesWriterHandler implements ShutdownListener, IterationStarts
 
 	@Override
 	public void notifyIterationStarts(IterationStartsEvent event) {
+		if (this.discreteModeChoiceConfigGroup.getMultinomialLogitSelectorConfig().getWriteDetailedUtilities()) {
+			String detailedUtilitiesFilePath = this.outputDirectoryHierarchy.getIterationFilename(event.getIteration(), "detailed_utilities.csv");
+			MultinomialLogitSelector.setCsvFilePath(detailedUtilitiesFilePath);
+		}
+
 		if(event.getIteration() == controllerConfigGroup.getFirstIteration() ||  this.discreteModeChoiceConfigGroup.getWriteUtilitiesInterval() % event.getIteration() != 0) {
 			return;
 		}

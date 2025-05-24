@@ -20,4 +20,12 @@ public class WrappingNestedUtilityCandidate implements NestedUtilityCandidate {
 	public Nest getNest() {
 		return rootNest;
 	}
+
+	public String getModes() {
+		return delegate.getModes().toString();
+	}
+
+	public String getUtilities() {
+		return delegate.getUtilities().toString();
+	}
 }

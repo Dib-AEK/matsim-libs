@@ -1,9 +1,6 @@
 package org.matsim.contribs.discrete_mode_choice.model.trip_based;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -21,7 +18,7 @@ import org.matsim.core.utils.timing.TimeTracker;
 
 /**
  * This class defines a trip-based discrete choice model.
- * 
+ *
  * @author sebhoerl
  *
  */
@@ -67,7 +64,7 @@ public class TripBasedModel implements DiscreteModeChoiceModel {
 			TripCandidate finalTripCandidate = null;
 
 			if (tripFilter.filter(person, trip)) {
-				UtilitySelector selector = selectorFactory.createUtilitySelector();
+				UtilitySelector selector = selectorFactory.createUtilitySelector(person, List.of(trip));
 				tripIndex++;
 
 				for (String mode : modes) {

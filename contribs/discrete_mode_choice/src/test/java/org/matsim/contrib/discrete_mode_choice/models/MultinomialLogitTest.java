@@ -1,11 +1,6 @@
 package org.matsim.contrib.discrete_mode_choice.models;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 import org.junit.jupiter.api.Test;
 
@@ -19,6 +14,7 @@ import org.matsim.contribs.discrete_mode_choice.model.constraints.CompositeTripC
 import org.matsim.contribs.discrete_mode_choice.model.filters.CompositeTripFilter;
 import org.matsim.contribs.discrete_mode_choice.model.mode_availability.DefaultModeAvailability;
 import org.matsim.contribs.discrete_mode_choice.model.mode_availability.ModeAvailability;
+import org.matsim.contribs.discrete_mode_choice.model.tour_based.TourBasedModel;
 import org.matsim.contribs.discrete_mode_choice.model.tour_based.TripFilter;
 import org.matsim.contribs.discrete_mode_choice.model.trip_based.TripBasedModel;
 import org.matsim.contribs.discrete_mode_choice.model.trip_based.TripConstraintFactory;
@@ -47,19 +43,20 @@ public class MultinomialLogitTest {
 		Activity originActivity = PopulationUtils.createActivityFromCoord("generic", new Coord(0.0, 0.0));
 		originActivity.setEndTime(0.0);
 
-		Activity destinationActivity = PopulationUtils.createActivityFromCoord("generic", new Coord(0.0, 0.0));
-		originActivity.setEndTime(0.0);
+		Activity destinationActivity1 = PopulationUtils.createActivityFromCoord("generic", new Coord(1.0, 0.0));
+		destinationActivity1.setEndTime(3600); // 1 hour
 
 		UtilitySelectorFactory selectorFactory = new MultinomialLogitSelector.Factory(minimumUtility, maximumUtility,
-				considerMinimumUtility);
+			considerMinimumUtility, true);
 
-		List<DiscreteModeChoiceTrip> trips = Collections
-				.singletonList(new DiscreteModeChoiceTrip(originActivity, destinationActivity, null, null, 0, 0, 0, new AttributesImpl()));
+		List<DiscreteModeChoiceTrip> trips = new ArrayList<>();
+		trips.add(new DiscreteModeChoiceTrip(originActivity, destinationActivity1, null, null, 0, 0, 0, new AttributesImpl()));
 
 		TripBasedModel model = new TripBasedModel(estimator, tripFilter, modeAvailability, constraintFactory,
-				selectorFactory, fallbackBehaviour,
-				TimeInterpretation.create(ActivityDurationInterpretation.tryEndTimeThenDuration,
-						TripDurationHandling.shiftActivityEndTimes));
+			selectorFactory, fallbackBehaviour,
+			TimeInterpretation.create(ActivityDurationInterpretation.tryEndTimeThenDuration,
+				TripDurationHandling.shiftActivityEndTimes));
+
 		Map<String, Integer> choices = new HashMap<>();
 		Random random = new Random(0);
 

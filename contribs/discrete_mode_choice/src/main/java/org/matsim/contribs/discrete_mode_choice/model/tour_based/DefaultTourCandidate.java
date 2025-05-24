@@ -1,12 +1,13 @@
 package org.matsim.contribs.discrete_mode_choice.model.tour_based;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.matsim.contribs.discrete_mode_choice.model.trip_based.candidates.TripCandidate;
 
 /**
  * Default implementation for a TourCandidate.
- * 
+ *
  * @author sebhoerl
  */
 public class DefaultTourCandidate implements TourCandidate {
@@ -27,4 +28,18 @@ public class DefaultTourCandidate implements TourCandidate {
 	public List<TripCandidate> getTripCandidates() {
 		return tripCandidates;
 	}
+
+	public String getModes() {
+		List<String> modes = tripCandidates.stream()
+										   .map(TripCandidate::getMode)
+										   .collect(Collectors.toList());
+		return String.join(",", modes);
+	}
+
+	public String getUtilities() {
+		return tripCandidates.stream()
+			.map(t -> String.format("%.3f", t.getUtility())) // Formats to 3 decimal places
+			.collect(Collectors.joining(","));
+	}
+
 }
