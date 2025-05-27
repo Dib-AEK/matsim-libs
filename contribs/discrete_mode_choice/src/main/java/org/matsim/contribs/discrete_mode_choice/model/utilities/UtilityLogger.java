@@ -50,6 +50,7 @@ public class UtilityLogger {
 
 	private static void writeHeader() throws IOException {
 		writer.write("person_id;trips_index;selection_id;candidate_mode;utilities;utility;selected\n");
+		writer.flush();
 		System.out.println("[DEBUG] UtilityLogger: Head is written");
 	}
 
@@ -66,9 +67,6 @@ public class UtilityLogger {
 
 		synchronized (LOCK) {
 			try {
-//				String startTime = tourTrips.stream()
-//											.map(t -> String.valueOf(t.getDepartureTime()))
-//											.collect(Collectors.joining(","));
 				String index = tourTrips.stream()
 										.map(t -> String.valueOf(t.getIndex()))
 										.collect(Collectors.joining(","));

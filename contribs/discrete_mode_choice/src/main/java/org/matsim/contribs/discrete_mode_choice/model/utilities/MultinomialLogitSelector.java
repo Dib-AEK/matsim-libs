@@ -150,4 +150,9 @@ public class MultinomialLogitSelector implements UtilitySelector {
 			UtilityLogger.init(path); // Open new one
 		}
 	}
+
+	public static void close() {
+			UtilityLogger.close();
+	}
+
 }

@@ -7,14 +7,16 @@ import org.matsim.contribs.discrete_mode_choice.modules.config.DiscreteModeChoic
 import org.matsim.contribs.discrete_mode_choice.modules.utils.ExtractPlanUtilities;
 import org.matsim.core.config.groups.ControllerConfigGroup;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
+import org.matsim.core.controler.events.IterationEndsEvent;
 import org.matsim.core.controler.events.IterationStartsEvent;
 import org.matsim.core.controler.events.ShutdownEvent;
+import org.matsim.core.controler.listener.IterationEndsListener;
 import org.matsim.core.controler.listener.IterationStartsListener;
 import org.matsim.core.controler.listener.ShutdownListener;
 
 import java.io.IOException;
 
-public class UtilitiesWriterHandler implements ShutdownListener, IterationStartsListener {
+public class UtilitiesWriterHandler implements ShutdownListener, IterationStartsListener, IterationEndsListener {
 	private final OutputDirectoryHierarchy outputDirectoryHierarchy;
 	private final ControllerConfigGroup controllerConfigGroup;
 	private final Population population;
@@ -53,6 +55,13 @@ public class UtilitiesWriterHandler implements ShutdownListener, IterationStarts
 			ExtractPlanUtilities.writePlanUtilities(population, filePath);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
+		}
+	}
+
+	@Override
+	public void notifyIterationEnds(IterationEndsEvent iterationEndsEvent) {
+		if (this.discreteModeChoiceConfigGroup.getMultinomialLogitSelectorConfig().getWriteDetailedUtilities()) {
+			MultinomialLogitSelector.close();
 		}
 	}
 }
