@@ -1,5 +1,7 @@
 package org.matsim.contrib.discrete_mode_choice;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -51,7 +53,7 @@ import org.matsim.core.utils.timing.TimeInterpretation;
 
 public class SubtourModeChoiceReplacementTest {
 	@Test
-	void testChoiceSet() throws NoFeasibleChoiceException {
+	void testChoiceSet() throws NoFeasibleChoiceException, IOException, URISyntaxException {
 		List<String> modes = Arrays.asList("walk", "pt");
 		List<String> constrainedModes = Arrays.asList();
 		boolean considerCarAvailability = true;
@@ -140,7 +142,7 @@ public class SubtourModeChoiceReplacementTest {
 	}
 
 	@Test
-	void testConstrainedChoiceSet() throws NoFeasibleChoiceException {
+	void testConstrainedChoiceSet() throws NoFeasibleChoiceException, IOException, URISyntaxException {
 		List<String> modes = Arrays.asList("walk", "car");
 		List<String> constrainedModes = Arrays.asList("car");
 		boolean considerCarAvailability = true;
@@ -229,7 +231,7 @@ public class SubtourModeChoiceReplacementTest {
 	}
 
 	@Test
-	void testLargerCase() throws NoFeasibleChoiceException {
+	void testLargerCase() throws NoFeasibleChoiceException, IOException, URISyntaxException {
 		List<String> modes = Arrays.asList("walk", "car", "pt", "bike");
 		List<String> constrainedModes = Arrays.asList("car", "bike");
 		boolean considerCarAvailability = true;
@@ -320,7 +322,7 @@ public class SubtourModeChoiceReplacementTest {
 	}
 
 	private Set<List<String>> computeDMC(PlanBuilder planBuilder, List<String> modes, List<String> constrainedModes,
-			boolean considerCarAvailability, boolean allowSingleLegs, int samples) throws NoFeasibleChoiceException {
+			boolean considerCarAvailability, boolean allowSingleLegs, int samples) throws NoFeasibleChoiceException, IOException, URISyntaxException {
 		TimeInterpretation timeInterpretation = TimeInterpretation.create(
 				ActivityDurationInterpretation.tryEndTimeThenDuration, TripDurationHandling.shiftActivityEndTimes);
 

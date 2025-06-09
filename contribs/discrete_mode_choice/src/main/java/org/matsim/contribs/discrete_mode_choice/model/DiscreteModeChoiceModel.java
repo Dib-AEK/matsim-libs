@@ -1,5 +1,7 @@
 package org.matsim.contribs.discrete_mode_choice.model;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Random;
 
@@ -8,7 +10,7 @@ import org.matsim.contribs.discrete_mode_choice.model.trip_based.candidates.Trip
 
 /**
  * Interface for a discrete mode choice model.
- * 
+ *
  * @author sebhoerl
  */
 public interface DiscreteModeChoiceModel {
@@ -17,7 +19,7 @@ public interface DiscreteModeChoiceModel {
 	 * trips.
 	 */
 	List<TripCandidate> chooseModes(Person person, List<DiscreteModeChoiceTrip> trips, Random random)
-			throws NoFeasibleChoiceException;
+		throws NoFeasibleChoiceException, IOException, URISyntaxException;
 
 	/**
 	 * Defines how choices are handled that cannot be taken, because constraints or

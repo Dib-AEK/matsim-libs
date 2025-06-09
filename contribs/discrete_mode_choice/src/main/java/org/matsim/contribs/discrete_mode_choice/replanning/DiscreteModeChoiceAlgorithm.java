@@ -1,5 +1,7 @@
 package org.matsim.contribs.discrete_mode_choice.replanning;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -72,6 +74,10 @@ public class DiscreteModeChoiceAlgorithm implements PlanAlgorithm {
 			plan.getAttributes().putAttribute("utility", chosenCandidates.stream().mapToDouble(UtilityCandidate::getUtility).sum());
 		} catch (NoFeasibleChoiceException e) {
 			throw new IllegalStateException(e);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		} catch (URISyntaxException e) {
+			throw new RuntimeException(e);
 		}
 	}
 }

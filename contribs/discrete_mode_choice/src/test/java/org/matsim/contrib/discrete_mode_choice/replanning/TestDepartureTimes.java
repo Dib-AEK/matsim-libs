@@ -1,5 +1,7 @@
 package org.matsim.contrib.discrete_mode_choice.replanning;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -49,7 +51,7 @@ import org.matsim.core.utils.timing.TimeInterpretation;
 
 public class TestDepartureTimes {
 	@Test
-	void testTripBasedModelDepartureTimes() throws NoFeasibleChoiceException {
+	void testTripBasedModelDepartureTimes() throws NoFeasibleChoiceException, IOException, URISyntaxException {
 		TripBasedModel model = createTripBasedModel();
 
 		// Case 1: Only activity end times, and trips fall well between the end times
@@ -130,7 +132,7 @@ public class TestDepartureTimes {
 	}
 
 	@Test
-	void testPushDepartureTimeToNextTour() throws NoFeasibleChoiceException {
+	void testPushDepartureTimeToNextTour() throws NoFeasibleChoiceException, IOException, URISyntaxException {
 		TourBasedModel model = createTourBasedModel();
 
 		Plan plan = new PlanBuilder() //
@@ -150,7 +152,7 @@ public class TestDepartureTimes {
 	}
 
 	@Test
-	void testAccumulateAndPushDepartureTimeToNextTour() throws NoFeasibleChoiceException {
+	void testAccumulateAndPushDepartureTimeToNextTour() throws NoFeasibleChoiceException, IOException, URISyntaxException {
 		TourBasedModel model = createTourBasedModel();
 
 		Plan plan = new PlanBuilder() //
@@ -170,7 +172,7 @@ public class TestDepartureTimes {
 	}
 
 	static private void assertDepartureTimes(DiscreteModeChoiceModel model, Plan plan, List<Double> referenceTimes)
-			throws NoFeasibleChoiceException {
+		throws NoFeasibleChoiceException, IOException, URISyntaxException {
 		List<DiscreteModeChoiceTrip> trips = new TripListConverter().convert(plan);
 		List<TripCandidate> candidates = model.chooseModes(plan.getPerson(), trips, new Random(0));
 
