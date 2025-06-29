@@ -12,8 +12,6 @@ import org.matsim.contribs.discrete_mode_choice.model.DiscreteModeChoiceTrip;
 import org.matsim.contribs.discrete_mode_choice.model.mode_availability.ModeAvailability;
 import org.matsim.contribs.discrete_mode_choice.model.tour_based.TripFilter;
 import org.matsim.contribs.discrete_mode_choice.model.trip_based.candidates.TripCandidate;
-import org.matsim.contribs.discrete_mode_choice.model.utilities.UtilityCandidate;
-import org.matsim.contribs.discrete_mode_choice.model.utilities.UtilitySelector;
 import org.matsim.contribs.discrete_mode_choice.model.utilities.UtilitySelectorFactory;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.timing.TimeInterpretation;
@@ -36,10 +34,10 @@ public class TripBasedModelLLM implements DiscreteModeChoiceModel {
 	private final UtilitySelectorFactory selectorFactory;
 	private final FallbackBehaviour fallbackBehaviour;
 	private final TimeInterpretation timeInterpretation;
-
+	private final LLM llmSelector;
 	public TripBasedModelLLM(TripEstimator estimator, TripFilter tripFilter, ModeAvailability modeAvailability,
 							 TripConstraintFactory constraintFactory, UtilitySelectorFactory selectorFactory,
-							 FallbackBehaviour fallbackBehaviour, TimeInterpretation timeInterpretation) {
+							 FallbackBehaviour fallbackBehaviour, TimeInterpretation timeInterpretation) throws IOException, URISyntaxException {
 		this.estimator = estimator;
 		this.tripFilter = tripFilter;
 		this.modeAvailability = modeAvailability;
@@ -47,62 +45,111 @@ public class TripBasedModelLLM implements DiscreteModeChoiceModel {
 		this.selectorFactory = selectorFactory;
 		this.fallbackBehaviour = fallbackBehaviour;
 		this.timeInterpretation = timeInterpretation;
+
+		String modelName = "gemma3:4b";
+		float temperature = 1.0F;
+		this.llmSelector = new LLM(modelName, temperature);
+		System.out.println("LLM model is used for mode selection.");
+		System.out.println("Model: " + modelName);
+		System.out.println("Temperature: " + temperature);
 	}
 
 	@Override
 	public List<TripCandidate> chooseModes(Person person, List<DiscreteModeChoiceTrip> trips, Random random)
 		throws NoFeasibleChoiceException, IOException, URISyntaxException {
+
 		List<String> modes = new ArrayList<>(modeAvailability.getAvailableModes(person, trips));
 		TripConstraint constraint = constraintFactory.createConstraint(person, trips, modes);
 
 		List<TripCandidate> tripCandidates = new ArrayList<>(trips.size());
 		List<String> tripCandidateModes = new ArrayList<>(trips.size());
 
-		LLM llmSelector = new LLM("llama3.2:3b", 1.2f);
+		TimeTracker timeTracker = new TimeTracker(timeInterpretation);
 
 		int tripIndex = 0;
-		TimeTracker timeTracker = new TimeTracker(timeInterpretation);
 
 		for (DiscreteModeChoiceTrip trip : trips) {
 			timeTracker.addActivity(trip.getOriginActivity());
 			trip.setDepartureTime(timeTracker.getTime().seconds());
 
-			TripCandidate finalTripCandidate = null;
+			TripCandidate selectedCandidate;
 
 			if (tripFilter.filter(person, trip)) {
 				tripIndex++;
 
-				// Build agent and trip attribute maps
-				Map<String, Object> agentAttrs = getAgentAttributes(person);
-				Map<String, Object> tripAttrs = getTripAttributes(trip);
-
-				List<String> validModes = modes;
-				for (String mode : modes) {
-					if (!constraint.validateBeforeEstimation(trip, mode, tripCandidateModes)) {
-						validModes.remove(mode);
+				try {
+					selectedCandidate = selectValidTripCandidate(
+						person, trip, modes, tripCandidateModes, tripCandidates,
+						constraint, tripIndex
+					);
+				} catch (NoFeasibleChoiceException e) {
+					switch (fallbackBehaviour) {
+						case INITIAL_CHOICE:
+							logger.info(buildFallbackMessage(tripIndex, person, "Setting trip back to initial mode."));
+							selectedCandidate = createFallbackCandidate(person, trip, tripCandidates);
+							break;
+						case IGNORE_AGENT:
+							return handleIgnoreAgent(tripIndex, person, trips);
+						case EXCEPTION:
+						default:
+							throw new NoFeasibleChoiceException(buildFallbackMessage(tripIndex, person, ""));
 					}
-					// Ask LLM to choose the mode
-					String chosenMode;
-					try {
-						chosenMode = llmSelector.ask(agentAttrs, tripAttrs, validModes);
-					} catch (Exception e) {
-						throw new RuntimeException("Error querying LLM for mode choice", e);
-					}
-
-					// Estimate trip with chosen mode
-					finalTripCandidate = estimator.estimateTrip(person, chosenMode, trip, tripCandidates);
-
 				}
 			} else {
-				finalTripCandidate = createFallbackCandidate(person, trip, tripCandidates);
+			 	selectedCandidate = createFallbackCandidate(person, trip, tripCandidates);
 			}
 
-			tripCandidates.add(finalTripCandidate);
-			tripCandidateModes.add(finalTripCandidate.getMode());
-			timeTracker.addDuration(finalTripCandidate.getDuration());
+			tripCandidates.add(selectedCandidate);
+			tripCandidateModes.add(selectedCandidate.getMode());
+			timeTracker.addDuration(selectedCandidate.getDuration());
 		}
 
 		return tripCandidates;
+	}
+
+	private TripCandidate selectValidTripCandidate(
+		Person person,
+		DiscreteModeChoiceTrip trip,
+		List<String> allModes,
+		List<String> tripCandidateModes,
+		List<TripCandidate> tripCandidates,
+		TripConstraint constraint,
+		int tripIndex
+	) throws NoFeasibleChoiceException {
+
+		List<String> validModes = new ArrayList<>(allModes);
+
+		while (!validModes.isEmpty()) {
+			// Filter modes before estimation
+			validModes.removeIf(mode -> !constraint.validateBeforeEstimation(trip, mode, tripCandidateModes));
+
+			if (validModes.isEmpty()) break;
+
+			String chosenMode;
+			try {
+				chosenMode = llmSelector.askMode(person, trip, validModes, tripCandidates, this.estimator);
+			} catch (Exception e) {
+				// throw new RuntimeException("Error querying LLM for mode choice", e);
+				throw new NoFeasibleChoiceException(buildFallbackMessage(tripIndex, person, ""));
+			}
+
+			TripCandidate candidate = estimator.estimateTrip(person, chosenMode, trip, tripCandidates);
+
+			if (!Double.isFinite(candidate.getUtility())) {
+				logger.warn(buildIllegalUtilityMessage(tripIndex, person, candidate));
+				validModes.remove(chosenMode); // Remove and retry
+				continue;
+			}
+
+			if (!constraint.validateAfterEstimation(trip, candidate, tripCandidates)) {
+				validModes.remove(chosenMode); // Remove and retry
+				continue;
+			}
+
+			return candidate; // Valid candidate
+		}
+
+		throw new NoFeasibleChoiceException(buildFallbackMessage(tripIndex, person, ""));
 	}
 
 
@@ -130,27 +177,5 @@ public class TripBasedModelLLM implements DiscreteModeChoiceModel {
 	private String buildIllegalUtilityMessage(int tripIndex, Person person, TripCandidate candidate) {
 		return String.format("Received illegal utility for trip %d (%s) of agent %s. Continuing with next candidate.",
 			tripIndex, candidate.getMode(), person.getId().toString());
-	}
-
-	private Map<String, Object> getTripAttributes(DiscreteModeChoiceTrip trip) {
-		Map<String, Object> attrs = new HashMap<>();
-		attrs.put("originActivity", trip.getOriginActivity().getType());
-		attrs.put("destinationActivity", trip.getDestinationActivity().getType());
-		attrs.put("departureTime", trip.getDepartureTime());
-
-		double euclideanDistance = CoordUtils.calcEuclideanDistance(trip.getOriginActivity().getCoord(),
-			trip.getDestinationActivity().getCoord()) * 1e-3;
-		attrs.put("euclideanDistance", euclideanDistance);
-		return attrs;
-	}
-
-	private Map<String, Object> getAgentAttributes(Person person) {
-		Map<String, Object> attrs = new HashMap<>();
-		attrs.put("age", person.getAttributes().getAttribute("age"));
-		attrs.put("gender", person.getAttributes().getAttribute("sex"));
-		attrs.put("income", person.getAttributes().getAttribute("income"));
-		attrs.put("license", person.getAttributes().getAttribute("license"));
-		attrs.put("carAvailable", person.getAttributes().getAttribute("carAvailable"));
-		return attrs;
 	}
 }

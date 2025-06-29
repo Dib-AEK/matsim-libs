@@ -1,10 +1,15 @@
 package org.matsim.contribs.discrete_mode_choice.modules;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 
 import com.google.common.base.Verify;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.contribs.discrete_mode_choice.components.estimators.CumulativeTourEstimator;
 import org.matsim.contribs.discrete_mode_choice.components.tour_finder.TourFinder;
 import org.matsim.contribs.discrete_mode_choice.model.DiscreteModeChoiceModel;
@@ -16,6 +21,7 @@ import org.matsim.contribs.discrete_mode_choice.model.mode_chain.DefaultModeChai
 import org.matsim.contribs.discrete_mode_choice.model.mode_chain.ModeChainGeneratorFactory;
 import org.matsim.contribs.discrete_mode_choice.model.tour_based.*;
 import org.matsim.contribs.discrete_mode_choice.model.trip_based.TripBasedModel;
+import org.matsim.contribs.discrete_mode_choice.model.trip_based.TripBasedModelLLM;
 import org.matsim.contribs.discrete_mode_choice.model.trip_based.TripConstraintFactory;
 import org.matsim.contribs.discrete_mode_choice.model.trip_based.TripEstimator;
 import org.matsim.contribs.discrete_mode_choice.model.utilities.UtilitySelectorFactory;
@@ -36,6 +42,9 @@ import com.google.inject.Singleton;
  *
  */
 public class ModelModule extends AbstractModule {
+
+	public static final Logger logger = LogManager.getLogger(ModelModule.class);
+
 	@Override
 	public void install() {
 		install(new ModeAvailabilityModule());
@@ -50,15 +59,17 @@ public class ModelModule extends AbstractModule {
 	}
 
 	public enum ModelType {
-		Trip, Tour, EfficientTour
+		Trip, Tour, EfficientTour, TripLLM
 	}
 
 	@Provides
 	public DiscreteModeChoiceModel provideDiscreteModeChoiceModel(DiscreteModeChoiceConfigGroup dmcConfig,
-			Provider<TourBasedModel> tourBasedProvider, Provider<TripBasedModel> tripBasedProvider, Provider<EfficientTourBasedModel> efficientTourBasedModelProvider) {
+			Provider<TourBasedModel> tourBasedProvider, Provider<TripBasedModel> tripBasedProvider, Provider<TripBasedModelLLM> tripBasedLLMProvider,
+		    Provider<EfficientTourBasedModel> efficientTourBasedModelProvider) {
 		return switch( dmcConfig.getModelType() ){
 			case Tour -> tourBasedProvider.get();
 			case Trip -> tripBasedProvider.get();
+			case TripLLM -> tripBasedLLMProvider.get();
 			case EfficientTour -> efficientTourBasedModelProvider.get();
 			default -> throw new IllegalStateException();
 		};
@@ -97,6 +108,16 @@ public class ModelModule extends AbstractModule {
 	}
 
 	@Provides
+	public TripBasedModelLLM provideTripBasedModelLLM(TripEstimator estimator, TripFilter tripFilter,
+												ModeAvailability modeAvailability, TripConstraintFactory constraintFactory,
+												UtilitySelectorFactory selectorFactory, DiscreteModeChoiceConfigGroup dmcConfig,
+												TimeInterpretation timeInterpretation) throws IOException, URISyntaxException {
+		logger.info("TripBasedModelLLM: Dmc implementation is used.");
+		return new TripBasedModelLLM(estimator, tripFilter, modeAvailability, constraintFactory, selectorFactory,
+			dmcConfig.getFallbackBehaviour(), timeInterpretation);
+	}
+
+	@Provides
 	@Singleton
 	public DefaultModeChainGenerator.Factory provideDefaultModeChainGeneratorFactory() {
 		return new DefaultModeChainGenerator.Factory();
@@ -109,10 +130,13 @@ public class ModelModule extends AbstractModule {
 		Collection<TripFilter> filters = new ArrayList<>(names.size());
 
 		for (String name : names) {
-			if (!providers.containsKey(name)) {
-				throw new IllegalStateException(String.format("TripFilter '%s' does not exist.", name));
-			} else {
-				filters.add(providers.get(name).get());
+			boolean isValid = !Objects.equals(name, "");
+			if (isValid){
+				if (!providers.containsKey(name)) {
+					throw new IllegalStateException(String.format("TripFilter '%s' does not exist.", name));
+				} else {
+					filters.add(providers.get(name).get());
+				}
 			}
 		}
 
